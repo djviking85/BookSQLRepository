@@ -1,17 +1,25 @@
 package pro.ske.demo.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import pro.ske.demo.model.Book;
+import pro.ske.demo.model.BookCover;
 import pro.ske.demo.services.BookCoverService;
 import pro.ske.demo.services.BookService;
 
 import javax.persistence.Entity;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @RestController
 @RequestMapping("/books")
@@ -20,6 +28,9 @@ public class BooksController {
 
     @Autowired
     private BookService bookService;
+
+    @Autowired
+    private BookCoverService bookCoverService;
 
     public BooksController(BookService bookService) {
         this.bookService = bookService;
@@ -87,4 +98,33 @@ public class BooksController {
         bookCoverService.uploadCover(id, cover);
         return ResponseEntity.ok().build();
     }
+
+    //    2 метода - 1 превью загружает уменьшенную версию, 2 - ориганал в гет методах ниже
+    @GetMapping(value = "{id}/cover/preview")
+    public ResponseEntity<byte[]> downloacCover(@PathVariable Long id) {
+        BookCover bookCover = bookCoverService.findBookCover(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(bookCover.getMediaType()));
+        headers.setContentLength(bookCover.getPreview().length);
+
+        return ResponseEntity.status(HttpStatus.OK).headers(headers).body(bookCover.getPreview());
+    }
+
+    @GetMapping(value = "{id}/cover")
+    public void downloadCover (@PathVariable Long id, HttpServletResponse response) throws IOException {
+        BookCover bookCover = bookCoverService.findBookCover(id);
+
+        Path path = Path.of(bookCover.getFilePath());
+
+        try   (InputStream is = Files.newInputStream(path);
+               OutputStream os = response.getOutputStream();) {
+            response.setContentType(bookCover.getMediaType());
+            response.setContentLength((int) bookCover.getFileSize());
+            is.transferTo(os);
+        }
+
+
+    }
+
+
 }
