@@ -103,23 +103,42 @@ public class BooksController {
     @GetMapping(value = "{id}/cover/preview")
     public ResponseEntity<byte[]> downloacCover(@PathVariable Long id) {
         BookCover bookCover = bookCoverService.findBookCover(id);
+
+//        работа с загаловками
         HttpHeaders headers = new HttpHeaders();
+//        заголовок что за тип данных возрвщается - медиатайп
         headers.setContentType(MediaType.parseMediaType(bookCover.getMediaType()));
+//        заголовок длины контента (сколько загружено, сколько всего и определить сколько осталось)
         headers.setContentLength(bookCover.getPreview().length);
 
+//        указываем статус - окей, указываем заголовки о правильности данных и сами данные массивы байт
         return ResponseEntity.status(HttpStatus.OK).headers(headers).body(bookCover.getPreview());
     }
 
     @GetMapping(value = "{id}/cover")
+//    тперь 2ой метод
     public void downloadCover (@PathVariable Long id, HttpServletResponse response) throws IOException {
+//        получаем инфу об обложке
         BookCover bookCover = bookCoverService.findBookCover(id);
 
+//        получаем путь к файлу  и метод оф получаем путь в виделе обьекта Патх
         Path path = Path.of(bookCover.getFilePath());
 
+//        так же обьявляем переменные на вход и выход
+//                берем класс файлс вызываем метод стрим и забираем по одному байту
         try   (InputStream is = Files.newInputStream(path);
+//               берем обьект респонс и вызываем пакет оаут оф стрим
+
                OutputStream os = response.getOutputStream();) {
+
+//            покажет что все у нах хорошо
+            response.setStatus(200);
+
+//            заголовки по типу контента и длине контента
             response.setContentType(bookCover.getMediaType());
             response.setContentLength((int) bookCover.getFileSize());
+
+//            вызываем метод трансферт ту на сверер - из жесткого диска и отправляем в браузер пользователя
             is.transferTo(os);
         }
 
